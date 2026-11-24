@@ -1,0 +1,162 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "name": "finance_data_project.ipynb"
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Finance Data Analysis Project\n",
+        "\n",
+        "Dans ce projet d'analyse exploratoire de données (EDA), nous étudions l'évolution du cours des actions des grandes banques américaines durant la crise financière de 2007-2008 jusqu'au début de l'année 2016."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "!pip install -q yfinance\n",
+        "\n",
+        "import yfinance as yf\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import datetime\n",
+        "import seaborn as sns\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "%matplotlib inline"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 1. Récupération des données\n",
+        "\n",
+        "Nous récupérons les données boursières du **1er janvier 2006** au **1er janvier 2016** pour les 6 banques suivantes :\n",
+        "* Bank of America (`BAC`)\n",
+        "* CitiGroup (`C`)\n",
+        "* Goldman Sachs (`GS`)\n",
+        "* JPMorgan Chase (`JPM`)\n",
+        "* Morgan Stanley (`MS`)\n",
+        "* Wells Fargo (`WFC`)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "start = datetime.datetime(2006, 1, 1)\n",
+        "end = datetime.datetime(2016, 1, 1)\n",
+        "\n",
+        "# Liste des tickers par ordre alphabétique\n",
+        "tickers = ['BAC', 'C', 'GS', 'JPM', 'MS', 'WFC']\n",
+        "\n",
+        "# Téléchargement des données pour chaque banque\n",
+        "BAC = yf.download(\"BAC\", start=start, end=end)\n",
+        "C   = yf.download(\"C\", start=start, end=end)\n",
+        "GS  = yf.download(\"GS\", start=start, end=end)\n",
+        "JPM = yf.download(\"JPM\", start=start, end=end)\n",
+        "MS  = yf.download(\"MS\", start=start, end=end)\n",
+        "WFC = yf.download(\"WFC\", start=start, end=end)\n",
+        "\n",
+        "# Suppression du MultiIndex éventuel généré par les versions récentes de yfinance\n",
+        "for df_bank in [BAC, C, GS, JPM, MS, WFC]:\n",
+        "    if isinstance(df_bank.columns, pd.MultiIndex):\n",
+        "        df_bank.columns = df_bank.columns.get_level_values(0)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "# Concaténation sur l'axe des colonnes avec les tickers comme clés\n",
+        "bank_stocks = pd.concat([BAC, C, GS, JPM, MS, WFC], axis=1, keys=tickers)\n",
+        "\n",
+        "# Définition des noms des niveaux de colonnes\n",
+        "bank_stocks.columns.names = ['Bank Ticker', 'Stock Info']\n",
+        "\n",
+        "# Aperçu des 5 premières lignes\n",
+        "bank_stocks.head()"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 2. Analyse Exploratoire des Données (EDA)\n",
+        "\n",
+        "### Prix de clôture (`Close`) maximum pour chaque banque sur la période"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "bank_stocks.xs(key='Close', axis=1, level='Stock Info').max()"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Calcul des rendements journaliers (`returns`)\n",
+        "\n",
+        "Le rendement est défini par :\n",
+        "$$r_t = \\frac{p_t - p_{t-1}}{p_{t-1}} = \\frac{p_t}{p_{t-1}} - 1$$"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "returns = pd.DataFrame()\n",
+        "\n",
+        "for tick in tickers:\n",
+        "    returns[tick + ' Return'] = bank_stocks[tick]['Close'].pct_change()\n",
+        "\n",
+        "returns.head()"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Visualisation des corrélations avec `pairplot`"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "sns.pairplot(returns[1:])\n",
+        "plt.show()"
+      ]
+    }
+  ]
+}
